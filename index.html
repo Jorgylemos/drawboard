@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drawboard Minimal</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .drag-region { -webkit-app-region: drag; }
+    .no-drag { -webkit-app-region: no-drag; }
+    canvas { touch-action: none; }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden transition-colors duration-300 rounded-xl border select-none flex flex-col
+             bg-slate-900/90 text-slate-100 border-slate-700/50 
+             dark:bg-slate-900/90 dark:text-slate-100 dark:border-slate-700/50
+             light:bg-slate-200/95 light:text-slate-800 light:border-slate-300">
+
+  <!-- BARRA SUPERIOR DE TÍTULO / DRAG -->
+  <header class="drag-region flex items-center justify-between px-3 py-2 bg-slate-950/40 border-b border-slate-800/60 dark:bg-slate-950/40 dark:border-slate-800/60 text-xs">
+    <div class="flex items-center gap-2 text-slate-400 font-medium">
+      <i data-lucide="pen-tool" class="w-4 h-4 text-indigo-400"></i>
+      <span>Drawboard</span>
+      <span id="save-status" class="text-[10px] opacity-60 ml-2">(Salvo)</span>
+    </div>
+
+    <!-- Ações / Fechar / Fixar / Tema -->
+    <div class="no-drag flex items-center gap-1">
+      <button id="btn-theme" title="Alternar Tema (Claro/Escuro)" class="p-1 hover:bg-slate-800/50 rounded text-slate-400 hover:text-white transition">
+        <i id="theme-icon-dark" data-lucide="moon" class="w-3.5 h-3.5"></i>
+        <i id="theme-icon-light" data-lucide="sun" class="w-3.5 h-3.5 hidden text-amber-400"></i>
+      </button>
+
+      <div class="h-3 w-[1px] bg-slate-800 mx-1"></div>
+
+      <button id="btn-pin" title="Fixar no Topo" class="p-1 hover:bg-slate-800/50 rounded text-indigo-400 transition">
+        <i data-lucide="pin" class="w-3.5 h-3.5"></i>
+      </button>
+      <button id="btn-min" title="Minimizar" class="p-1 hover:bg-slate-800/50 rounded text-slate-400 transition">
+        <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+      </button>
+      <button id="btn-close" title="Fechar" class="p-1 hover:bg-red-500/20 hover:text-red-400 rounded text-slate-400 transition">
+        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- PAINEL PRINCIPAL / CANVAS -->
+  <main class="relative flex-1 w-full h-full">
+    <canvas id="paintCanvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+
+    <!-- BARRA FLUTUANTE DE FERRAMENTAS -->
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-md border border-slate-800 px-3 py-2 rounded-2xl shadow-2xl flex items-center gap-3 dark:bg-slate-950/90 dark:border-slate-800">
+      
+      <!-- Pincel / Borracha -->
+      <div class="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 dark:bg-slate-900/80">
+        <button id="tool-pen" class="p-2 rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500" title="Pincel (P)">
+          <i data-lucide="pencil" class="w-4 h-4"></i>
+        </button>
+        <button id="tool-eraser" class="p-2 rounded-lg text-slate-400 hover:text-white transition hover:bg-slate-800" title="Borracha (E)">
+          <i data-lucide="eraser" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="h-5 w-[1px] bg-slate-800"></div>
+
+      <!-- Paleta de Cores -->
+      <div class="flex items-center gap-1.5" id="color-palette"></div>
+
+      <div class="h-5 w-[1px] bg-slate-800"></div>
+
+      <!-- Espessura do Pincel -->
+      <div class="flex items-center gap-1.5" title="Espessura Base">
+        <i data-lucide="circle-dot" class="w-3.5 h-3.5 text-slate-400"></i>
+        <input id="brush-size" type="range" min="1" max="30" value="3" class="w-14 accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+      </div>
+
+      <div class="h-5 w-[1px] bg-slate-800"></div>
+
+      <!-- Estabilização (Estilo Paint Tool SAI) -->
+      <div class="flex items-center gap-1.5" title="Estabilização / Suavidade do Traço">
+        <span class="text-[10px] text-slate-400 font-medium">Suav.</span>
+        <input id="stabilization-range" type="range" min="0" max="20" value="5" class="w-14 accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+      </div>
+
+      <div class="h-5 w-[1px] bg-slate-800"></div>
+
+      <!-- Limpar e Desfazer -->
+      <div class="flex items-center gap-1">
+        <button id="btn-undo" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition" title="Desfazer (Ctrl+Z)">
+          <i data-lucide="undo" class="w-4 h-4"></i>
+        </button>
+        <button id="btn-clear" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition" title="Limpar Tela (C)">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- LÓGICA DO CANVAS COM CORREÇÃO DE BUG E ANTIALIASING SUAVE -->
+  <script>
+    lucide.createIcons();
+
+    document.getElementById('btn-close').onclick = () => window.electronAPI.controlWindow('close');
+    document.getElementById('btn-min').onclick = () => window.electronAPI.controlWindow('minimize');
+    const pinBtn = document.getElementById('btn-pin');
+    pinBtn.onclick = () => window.electronAPI.controlWindow('toggle-top');
+
+    window.electronAPI.onTopStatus((isTop) => {
+      pinBtn.classList.toggle('text-indigo-400', isTop);
+      pinBtn.classList.toggle('text-slate-500', !isTop);
+    });
+
+    const canvas = document.getElementById('paintCanvas');
+    const ctx = canvas.getContext('2d');
+    const saveStatus = document.getElementById('save-status');
+
+    let isDrawing = false;
+    let mode = 'pen';
+    let currentTheme = localStorage.getItem('theme') || 'dark';
+    let currentColor = currentTheme === 'dark' ? '#ffffff' : '#0f172a';
+    let currentSize = 3;
+    let history = [];
+
+    let targetX = 0, targetY = 0;
+    let drawX = 0, drawY = 0;
+    let currentPressure = 1;
+    let animationFrameId = null;
+
+    const darkPalette = ['#ffffff', '#fbbf24', '#34d399', '#38bdf8', '#fb7185'];
+    const lightPalette = ['#0f172a', '#d97706', '#059669', '#0284c7', '#e11d48'];
+
+    function getCanvasBgColor() {
+      return currentTheme === 'dark' ? '#0f172a' : '#f1f5f9';
+    }
+
+    function renderColorPalette() {
+      const paletteContainer = document.getElementById('color-palette');
+      const colors = currentTheme === 'dark' ? darkPalette : lightPalette;
+      paletteContainer.innerHTML = '';
+
+      colors.forEach((hex) => {
+        const btn = document.createElement('button');
+        const isActive = hex.toLowerCase() === currentColor.toLowerCase();
+        btn.className = `color-btn w-6 h-6 rounded-full transition ${isActive ? 'ring-2 ring-indigo-500 scale-110' : 'hover:scale-105'}`;
+        btn.style.backgroundColor = hex;
+        btn.dataset.color = hex;
+        
+        btn.onclick = () => {
+          document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-indigo-500', 'scale-110'));
+          btn.classList.add('ring-2', 'ring-indigo-500', 'scale-110');
+          currentColor = hex;
+          if (mode === 'eraser') document.getElementById('tool-pen').click();
+        };
+
+        paletteContainer.appendChild(btn);
+      });
+    }
+
+    // TEMA E INVERSÃO COM PRESERVAÇÃO DE ANTIALIASING
+    const btnTheme = document.getElementById('btn-theme');
+    const iconDark = document.getElementById('theme-icon-dark');
+    const iconLight = document.getElementById('theme-icon-light');
+
+    function applyTheme(theme, preserveCanvas = false) {
+      const oldTheme = currentTheme;
+      currentTheme = theme;
+      localStorage.setItem('theme', theme);
+
+      let tempCanvas = null;
+      if (preserveCanvas && canvas.width > 0 && canvas.height > 0) {
+        tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+      }
+
+      if (theme === 'light') {
+        document.body.className = "h-screen w-screen overflow-hidden transition-colors duration-300 rounded-xl border select-none flex flex-col bg-slate-200/95 text-slate-800 border-slate-300/80";
+        iconDark.classList.add('hidden');
+        iconLight.classList.remove('hidden');
+        // Se a cor atual era a padrão do escuro, ajusta para a padrão do claro
+        if (currentColor.toLowerCase() === darkPalette[0].toLowerCase() || !lightPalette.includes(currentColor)) {
+          currentColor = lightPalette[0];
+        }
+      } else {
+        document.body.className = "h-screen w-screen overflow-hidden transition-colors duration-300 rounded-xl border select-none flex flex-col bg-slate-900/90 text-slate-100 border-slate-700/50";
+        iconDark.classList.remove('hidden');
+        iconLight.classList.add('hidden');
+        // Se a cor atual era a padrão do claro, ajusta para a padrão do escuro
+        if (currentColor.toLowerCase() === lightPalette[0].toLowerCase() || !darkPalette.includes(currentColor)) {
+          currentColor = darkPalette[0];
+        }
+      }
+
+      ctx.fillStyle = getCanvasBgColor();
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (tempCanvas) {
+        const tCtx = tempCanvas.getContext('2d');
+        const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        const data = imgData.data;
+        const isOldDark = (oldTheme === 'dark');
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+          if (a === 0) continue;
+
+          // Identifica pixels de fundo antigo para remover
+          const isBg = isOldDark ? (r === 15 && g === 23 && b === 42) : (r === 241 && g === 245 && b === 249);
+          if (isBg) {
+            data[i+3] = 0;
+          } else {
+            // Conversão suave mantendo o antialiasing (whiteness / darkness multiplier)
+            if (isOldDark) {
+              const whiteness = (r + g + b) / 765;
+              data[i] = 15; data[i+1] = 23; data[i+2] = 42;
+              data[i+3] = Math.round(a * Math.max(0.2, whiteness));
+            } else {
+              const darkness = 1 - ((r + g + b) / 765);
+              data[i] = 255; data[i+1] = 255; data[i+2] = 255;
+              data[i+3] = Math.round(a * Math.max(0.2, darkness));
+            }
+          }
+        }
+        tCtx.putImageData(imgData, 0, 0);
+        ctx.drawImage(tempCanvas, 0, 0);
+      }
+
+      renderColorPalette();
+    }
+
+    btnTheme.onclick = () => {
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(newTheme, true);
+      autoSave();
+    };
+
+    function autoSave() {
+      localStorage.setItem('savedCanvas', canvas.toDataURL());
+      saveStatus.innerText = '(Salvo)';
+      saveStatus.classList.remove('opacity-30');
+      saveStatus.classList.add('opacity-60');
+    }
+
+    function loadSavedCanvas() {
+      const savedData = localStorage.getItem('savedCanvas');
+      if (savedData) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = savedData;
+      } else {
+        ctx.fillStyle = getCanvasBgColor();
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    function resizeCanvas() {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      if (canvas.width > 0 && canvas.height > 0) {
+        tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+      }
+
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      ctx.fillStyle = getCanvasBgColor();
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (canvas.width > 0 && canvas.height > 0) {
+        ctx.drawImage(tempCanvas, 0, 0);
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    function saveState() {
+      if (history.length > 25) history.shift();
+      history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    }
+
+    function smoothDrawLoop() {
+      if (!isDrawing) return;
+
+      const stabValue = parseInt(document.getElementById('stabilization-range').value);
+
+      if (stabValue === 0) {
+        drawX = targetX;
+        drawY = targetY;
+      } else {
+        const factor = 1 / (stabValue + 1);
+        drawX += (targetX - drawX) * factor;
+        drawY += (targetY - drawY) * factor;
+      }
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      if (mode === 'eraser') {
+        ctx.strokeStyle = getCanvasBgColor();
+      } else {
+        ctx.strokeStyle = currentColor;
+      }
+      
+      const pressureMultiplier = (currentPressure > 0 && currentPressure !== 0.5) ? currentPressure : 1;
+      ctx.lineWidth = Math.max(1, currentSize * pressureMultiplier);
+      ctx.globalCompositeOperation = 'source-over';
+
+      ctx.lineTo(drawX, drawY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(drawX, drawY);
+
+      animationFrameId = requestAnimationFrame(smoothDrawLoop);
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      isDrawing = true;
+      saveState();
+      saveStatus.innerText = '(Desenhando...)';
+
+      const rect = canvas.getBoundingClientRect();
+      targetX = e.clientX - rect.left;
+      targetY = e.clientY - rect.top;
+      drawX = targetX;
+      drawY = targetY;
+      
+      currentPressure = e.pressure > 0 ? e.pressure : 1;
+
+      ctx.beginPath();
+      ctx.moveTo(drawX, drawY);
+
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(smoothDrawLoop);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      targetX = e.clientX - rect.left;
+      targetY = e.clientY - rect.top;
+      if (e.pressure > 0) {
+        currentPressure = e.pressure;
+      }
+    });
+
+    const stopDrawing = () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      cancelAnimationFrame(animationFrameId);
+      ctx.beginPath();
+      autoSave();
+    };
+
+    canvas.addEventListener('pointerup', stopDrawing);
+    canvas.addEventListener('pointerleave', stopDrawing);
+
+    const penBtn = document.getElementById('tool-pen');
+    const eraserBtn = document.getElementById('tool-eraser');
+
+    penBtn.onclick = () => {
+      mode = 'pen';
+      penBtn.className = 'p-2 rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500';
+      eraserBtn.className = 'p-2 rounded-lg text-slate-400 hover:text-white transition hover:bg-slate-800/50';
+    };
+
+    eraserBtn.onclick = () => {
+      mode = 'eraser';
+      eraserBtn.className = 'p-2 rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500';
+      penBtn.className = 'p-2 rounded-lg text-slate-400 hover:text-white transition hover:bg-slate-800/50';
+    };
+
+    document.getElementById('brush-size').oninput = (e) => {
+      currentSize = e.target.value;
+    };
+
+    document.getElementById('btn-clear').onclick = () => {
+      saveState();
+      ctx.fillStyle = getCanvasBgColor();
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      autoSave();
+    };
+
+    const undo = () => {
+      if (history.length > 0) {
+        ctx.putImageData(history.pop(), 0, 0);
+        autoSave();
+      }
+    };
+    document.getElementById('btn-undo').onclick = undo;
+
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key.toLowerCase() === 'z') undo();
+      if (e.key.toLowerCase() === 'e') eraserBtn.click();
+      if (e.key.toLowerCase() === 'p') penBtn.click();
+      if (e.key.toLowerCase() === 'c') document.getElementById('btn-clear').click();
+    });
+
+    window.onload = () => {
+      applyTheme(currentTheme, false);
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      loadSavedCanvas();
+    };
+  </script>
+</body>
+</html>

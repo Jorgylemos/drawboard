@@ -1,0 +1,12 @@
+{
+  "name": "drawboard-minimal",
+  "version": "1.0.0",
+  "description": "Desenhe e resolva equações por cima de qualquer janela.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
