@@ -18,7 +18,7 @@ function createWindow() {
     }
   });
 
-  win.loadFile('index.html');
+  win.loadFile(path.join(__dirname, 'index.html'));
 
   // Eventos de janela vindos do renderer
   ipcMain.on('window-control', (event, action) => {
