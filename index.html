@@ -20,109 +20,186 @@
   </style>
 </head>
 <body class="h-screen w-screen overflow-hidden transition-colors duration-300 rounded-xl border select-none flex flex-col
-             bg-slate-900/90 text-slate-100 border-slate-700/50 
-             dark:bg-slate-900/90 dark:text-slate-100 dark:border-slate-700/50
-             light:bg-slate-200/95 light:text-slate-800 light:border-slate-300">
+             bg-slate-200 text-slate-800 border-slate-300
+             dark:bg-slate-900/90 dark:text-slate-100 dark:border-slate-700/50">
 
   <!-- BARRA SUPERIOR DE TÍTULO / DRAG -->
-  <header class="drag-region flex items-center justify-between px-3 py-2 bg-slate-950/40 border-b border-slate-800/60 dark:bg-slate-950/40 dark:border-slate-800/60 text-xs">
-    <div class="flex items-center gap-2 text-slate-400 font-medium">
-      <i data-lucide="pen-tool" class="w-4 h-4 text-indigo-400"></i>
+  <header class="drag-region flex items-center justify-between px-3 py-2 bg-slate-300/60 dark:bg-slate-950/40 border-b border-slate-400/40 dark:border-slate-800/60 text-xs transition-colors">
+    <div class="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium">
+      <i data-lucide="pen-tool" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></i>
       <span>Drawboard</span>
       <span id="save-status" class="text-[10px] opacity-60 ml-2">(Salvo)</span>
     </div>
 
-    <!-- Ações / Fechar / Fixar / Tema -->
+    <!-- Ações / Fechar / Fixar / Tema / Sidebar Toggle -->
     <div class="no-drag flex items-center gap-1">
-      <button id="btn-theme" title="Alternar Tema (Claro/Escuro)" class="p-1 hover:bg-slate-800/50 rounded text-slate-400 hover:text-white transition">
-        <i id="theme-icon-dark" data-lucide="moon" class="w-3.5 h-3.5"></i>
-        <i id="theme-icon-light" data-lucide="sun" class="w-3.5 h-3.5 hidden text-amber-400"></i>
+      <button id="btn-toggle-sidebar" title="Mostrar/Esconder Painel" class="p-1 hover:bg-slate-400/30 dark:hover:bg-slate-800/50 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">
+        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
       </button>
 
-      <div class="h-3 w-[1px] bg-slate-800 mx-1"></div>
+      <div class="h-3 w-[1px] bg-slate-400/50 dark:bg-slate-800 mx-1"></div>
 
-      <button id="btn-pin" title="Fixar no Topo" class="p-1 hover:bg-slate-800/50 rounded text-indigo-400 transition">
+      <button id="btn-theme" title="Alternar Tema (Claro/Escuro)" class="p-1 hover:bg-slate-400/30 dark:hover:bg-slate-800/50 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">
+        <i id="theme-icon-dark" data-lucide="moon" class="w-3.5 h-3.5"></i>
+        <i id="theme-icon-light" data-lucide="sun" class="w-3.5 h-3.5 hidden text-amber-500"></i>
+      </button>
+
+      <div class="h-3 w-[1px] bg-slate-400/50 dark:bg-slate-800 mx-1"></div>
+
+      <button id="btn-pin" title="Fixar no Topo" class="p-1 hover:bg-slate-400/30 dark:hover:bg-slate-800/50 rounded text-indigo-500 dark:text-indigo-400 transition">
         <i data-lucide="pin" class="w-3.5 h-3.5"></i>
       </button>
-      <button id="btn-min" title="Minimizar" class="p-1 hover:bg-slate-800/50 rounded text-slate-400 transition">
+      <button id="btn-min" title="Minimizar" class="p-1 hover:bg-slate-400/30 dark:hover:bg-slate-800/50 rounded text-slate-600 dark:text-slate-400 transition">
         <i data-lucide="minus" class="w-3.5 h-3.5"></i>
       </button>
-      <button id="btn-close" title="Fechar" class="p-1 hover:bg-red-500/20 hover:text-red-400 rounded text-slate-400 transition">
+      <button id="btn-close" title="Fechar" class="p-1 hover:bg-red-500/20 hover:text-red-500 rounded text-slate-600 dark:text-slate-400 transition">
         <i data-lucide="x" class="w-3.5 h-3.5"></i>
       </button>
     </div>
   </header>
 
   <!-- PAINEL PRINCIPAL / CANVAS -->
-  <main class="relative flex-1 w-full h-full">
-    <canvas id="paintCanvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+  <main class="relative flex-1 w-full h-full overflow-hidden">
+    <!-- Camada de Fundo Personalizado -->
+    <div id="custom-bg" class="absolute inset-0 bg-cover bg-center pointer-events-none transition-opacity duration-150" style="display: none; z-index: 0;"></div>
+    
+    <!-- Canvas de Desenho -->
+    <canvas id="paintCanvas" class="absolute inset-0 w-full h-full cursor-crosshair" style="z-index: 1;"></canvas>
 
-    <!-- BARRA FLUTUANTE DE FERRAMENTAS -->
-    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-md border border-slate-800 px-3 py-2 rounded-2xl shadow-2xl flex items-center gap-3 dark:bg-slate-950/90 dark:border-slate-800">
+    <!-- SIDEBAR LATERAL DIREITA -->
+    <aside id="sidebar" class="absolute top-3 right-3 w-64 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md border border-slate-300 dark:border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col gap-4 text-xs transition-all duration-200 z-30 hidden">
+      <div class="flex items-center justify-between font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-300 dark:border-slate-800 pb-2">
+        <span>Painel de Controle</span>
+        <button id="btn-close-sidebar" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+      </div>
+
+      <!-- Seção: Plano de Fundo -->
+      <div class="flex flex-col gap-2">
+        <label class="text-slate-500 dark:text-slate-400 font-medium">Plano de Fundo</label>
+        <button id="sidebar-btn-load-bg" class="w-full py-2 px-3 bg-slate-200 dark:bg-slate-900 hover:bg-slate-300 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-200 flex items-center justify-center gap-2 transition">
+          <i data-lucide="image" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></i> Escolher Imagem
+        </button>
+        <input type="file" id="bg-file-input" accept="image/*" class="hidden">
+        
+        <!-- Controles extras de fundo -->
+        <div id="bg-controls" class="flex flex-col gap-2 mt-1 hidden">
+          <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+            <span>Opacidade</span>
+            <span id="opacity-val">60%</span>
+          </div>
+          <input id="bg-opacity" type="range" min="10" max="100" value="60" class="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-300 dark:bg-slate-800 rounded-lg appearance-none">
+          <button id="btn-remove-bg" class="w-full py-1.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="trash" class="w-3.5 h-3.5"></i> Remover Fundo
+          </button>
+        </div>
+      </div>
+
+      <hr class="border-slate-300 dark:border-slate-800">
+
+      <!-- Seção: Ações do Drawboard -->
+      <div class="flex flex-col gap-2">
+        <label class="text-slate-500 dark:text-slate-400 font-medium">Ações do Canvas</label>
+        <button id="sidebar-btn-clear" class="w-full py-2 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl flex items-center justify-center gap-2 transition">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Limpar Desenhos (C)
+        </button>
+      </div>
+    </aside>
+
+    <!-- BARRA FLUTUANTE DE FERRAMENTAS INFERIOR -->
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-md border border-slate-300 dark:border-slate-800 px-3 py-2 rounded-2xl shadow-2xl flex items-center gap-3" style="z-index: 10;">
       
       <!-- Pincel / Borracha -->
-      <div class="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 dark:bg-slate-900/80">
+      <div class="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-300 dark:border-slate-800">
         <button id="tool-pen" class="p-2 rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500" title="Pincel (P)">
           <i data-lucide="pencil" class="w-4 h-4"></i>
         </button>
-        <button id="tool-eraser" class="p-2 rounded-lg text-slate-400 hover:text-white transition hover:bg-slate-800" title="Borracha (E)">
+        <button id="tool-eraser" class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition hover:bg-slate-300 dark:hover:bg-slate-800" title="Borracha (E)">
           <i data-lucide="eraser" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <div class="h-5 w-[1px] bg-slate-800"></div>
+      <div class="h-5 w-[1px] bg-slate-300 dark:bg-slate-800"></div>
 
-      <!-- Paleta de Cores -->
+      <!-- Paleta de Cores Padrão -->
       <div class="flex items-center gap-1.5" id="color-palette"></div>
 
-      <div class="h-5 w-[1px] bg-slate-800"></div>
+      <div class="h-5 w-[1px] bg-slate-300 dark:bg-slate-800"></div>
+
+      <!-- Seletor de Cores Customizado + Histórico Recente -->
+      <div class="flex items-center gap-1.5">
+        <label class="relative w-6 h-6 rounded-full overflow-hidden cursor-pointer border border-slate-400 dark:border-slate-700 hover:scale-105 transition flex items-center justify-center bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 shadow-sm" title="Escolher Cor Personalizada">
+          <input type="color" id="color-picker-input" class="absolute -inset-4 w-12 h-12 opacity-0 cursor-pointer">
+          <i data-lucide="plus" class="w-3.5 h-3.5 text-white pointer-events-none"></i>
+        </label>
+
+        <!-- Histórico de Cores Recentes -->
+        <div id="color-history" class="flex items-center gap-1"></div>
+      </div>
+
+      <div class="h-5 w-[1px] bg-slate-300 dark:bg-slate-800"></div>
 
       <!-- Espessura do Pincel -->
       <div class="flex items-center gap-1.5" title="Espessura Base">
-        <i data-lucide="circle-dot" class="w-3.5 h-3.5 text-slate-400"></i>
-        <input id="brush-size" type="range" min="1" max="30" value="3" class="w-14 accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+        <i data-lucide="circle-dot" class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400"></i>
+        <input id="brush-size" type="range" min="1" max="30" value="3" class="w-14 accent-indigo-500 cursor-pointer h-1.5 bg-slate-300 dark:bg-slate-800 rounded-lg appearance-none">
       </div>
 
-      <div class="h-5 w-[1px] bg-slate-800"></div>
+      <div class="h-5 w-[1px] bg-slate-300 dark:bg-slate-800"></div>
 
-      <!-- Estabilização (Estilo Paint Tool SAI) -->
+      <!-- Estabilização -->
       <div class="flex items-center gap-1.5" title="Estabilização / Suavidade do Traço">
-        <span class="text-[10px] text-slate-400 font-medium">Suav.</span>
-        <input id="stabilization-range" type="range" min="0" max="20" value="5" class="w-14 accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Suav.</span>
+        <input id="stabilization-range" type="range" min="0" max="20" value="5" class="w-14 accent-indigo-500 cursor-pointer h-1.5 bg-slate-300 dark:bg-slate-800 rounded-lg appearance-none">
       </div>
 
-      <div class="h-5 w-[1px] bg-slate-800"></div>
+      <div class="h-5 w-[1px] bg-slate-300 dark:bg-slate-800"></div>
 
-      <!-- Limpar e Desfazer -->
-      <div class="flex items-center gap-1">
-        <button id="btn-undo" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition" title="Desfazer (Ctrl+Z)">
-          <i data-lucide="undo" class="w-4 h-4"></i>
-        </button>
-        <button id="btn-clear" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition" title="Limpar Tela (C)">
-          <i data-lucide="trash-2" class="w-4 h-4"></i>
-        </button>
-      </div>
+      <!-- Botão Voltar (Desfazer) -->
+      <button id="btn-undo" class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300/50 dark:hover:bg-slate-800/50 rounded-xl transition" title="Voltar / Desfazer (Ctrl+Z)">
+        <i data-lucide="undo" class="w-4 h-4"></i>
+      </button>
 
     </div>
   </main>
 
-  <!-- LÓGICA DO CANVAS COM CORREÇÃO DE BUG E ANTIALIASING SUAVE -->
+  <!-- LÓGICA DO CANVAS E HISTÓRICO DE CORES CORRIGIDO -->
   <script>
     lucide.createIcons();
 
+    // Controles de Janela Electron
     document.getElementById('btn-close').onclick = () => window.electronAPI.controlWindow('close');
     document.getElementById('btn-min').onclick = () => window.electronAPI.controlWindow('minimize');
     const pinBtn = document.getElementById('btn-pin');
     pinBtn.onclick = () => window.electronAPI.controlWindow('toggle-top');
 
     window.electronAPI.onTopStatus((isTop) => {
-      pinBtn.classList.toggle('text-indigo-400', isTop);
-      pinBtn.classList.toggle('text-slate-500', !isTop);
+      pinBtn.classList.toggle('text-indigo-500', isTop);
+      pinBtn.classList.toggle('text-slate-400', !isTop);
     });
 
+    // Sidebar
+    const sidebar = document.getElementById('sidebar');
+    const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+    const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+
+    function toggleSidebar() {
+      sidebar.classList.toggle('hidden');
+      const isHidden = sidebar.classList.contains('hidden');
+      btnToggleSidebar.innerHTML = isHidden ? '<i data-lucide="eye" class="w-3.5 h-3.5"></i>' : '<i data-lucide="eye-off" class="w-3.5 h-3.5"></i>';
+      lucide.createIcons();
+    }
+
+    btnToggleSidebar.onclick = toggleSidebar;
+    btnCloseSidebar.onclick = toggleSidebar;
+
+    // Canvas & Estado
     const canvas = document.getElementById('paintCanvas');
     const ctx = canvas.getContext('2d');
     const saveStatus = document.getElementById('save-status');
+    const customBg = document.getElementById('custom-bg');
+    const bgControls = document.getElementById('bg-controls');
+    const bgOpacityInput = document.getElementById('bg-opacity');
+    const opacityVal = document.getElementById('opacity-val');
 
     let isDrawing = false;
     let mode = 'pen';
@@ -130,6 +207,9 @@
     let currentColor = currentTheme === 'dark' ? '#ffffff' : '#0f172a';
     let currentSize = 3;
     let history = [];
+
+    // Histórico de Cores Recentes (máximo 5 itens)
+    let colorHistory = ['#ffffff', '#0f172a'];
 
     let targetX = 0, targetY = 0;
     let drawX = 0, drawY = 0;
@@ -139,8 +219,42 @@
     const darkPalette = ['#ffffff', '#fbbf24', '#34d399', '#38bdf8', '#fb7185'];
     const lightPalette = ['#0f172a', '#d97706', '#059669', '#0284c7', '#e11d48'];
 
-    function getCanvasBgColor() {
-      return currentTheme === 'dark' ? '#0f172a' : '#f1f5f9';
+    function hasCustomBg() {
+      return customBg.style.display !== 'none' && customBg.style.backgroundImage !== '';
+    }
+
+    // Gerenciamento e Priorização do Histórico de Cores
+    function pushColorToHistory(hex) {
+      hex = hex.toLowerCase();
+      colorHistory = colorHistory.filter(c => c.toLowerCase() !== hex);
+      colorHistory.unshift(hex);
+      if (colorHistory.length > 5) {
+        colorHistory.pop();
+      }
+      renderColorHistory();
+    }
+
+    function renderColorHistory() {
+      const historyContainer = document.getElementById('color-history');
+      historyContainer.innerHTML = '';
+
+      colorHistory.forEach((hex) => {
+        const btn = document.createElement('button');
+        const isActive = hex.toLowerCase() === currentColor.toLowerCase();
+        btn.className = `w-5 h-5 rounded-full transition ${isActive ? 'ring-2 ring-indigo-500 scale-110' : 'hover:scale-105'}`;
+        btn.style.backgroundColor = hex;
+        btn.title = `Cor recente: ${hex}`;
+
+        btn.onclick = () => {
+          currentColor = hex;
+          document.getElementById('color-picker-input').value = hex;
+          pushColorToHistory(hex);
+          renderColorPalette();
+          if (mode === 'eraser') document.getElementById('tool-pen').click();
+        };
+
+        historyContainer.appendChild(btn);
+      });
     }
 
     function renderColorPalette() {
@@ -156,92 +270,115 @@
         btn.dataset.color = hex;
         
         btn.onclick = () => {
-          document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-indigo-500', 'scale-110'));
-          btn.classList.add('ring-2', 'ring-indigo-500', 'scale-110');
           currentColor = hex;
+          document.getElementById('color-picker-input').value = hex;
+          pushColorToHistory(currentColor);
+          renderColorPalette();
           if (mode === 'eraser') document.getElementById('tool-pen').click();
         };
 
         paletteContainer.appendChild(btn);
       });
+      renderColorHistory();
     }
 
-    // TEMA E INVERSÃO COM PRESERVAÇÃO DE ANTIALIASING
+    // Seletor de Cores Customizado (Corrigido para evitar histórico duplicado/lixo ao arrastar)
+    const colorPickerInput = document.getElementById('color-picker-input');
+    
+    // Atualiza a cor suavemente enquanto arrasta (sem sujar o histórico)
+    colorPickerInput.oninput = (e) => {
+      currentColor = e.target.value;
+      if (mode === 'eraser') document.getElementById('tool-pen').click();
+    };
+
+    // Só consolida e adiciona ao histórico quando o usuário termina de escolher a cor
+    colorPickerInput.onchange = (e) => {
+      currentColor = e.target.value;
+      pushColorToHistory(currentColor);
+      renderColorPalette();
+      if (mode === 'eraser') document.getElementById('tool-pen').click();
+    };
+
+    // Fundo Personalizado
+    const sidebarBtnLoadBg = document.getElementById('sidebar-btn-load-bg');
+    const bgFileInput = document.getElementById('bg-file-input');
+    const btnRemoveBg = document.getElementById('btn-remove-bg');
+
+    sidebarBtnLoadBg.onclick = () => bgFileInput.click();
+
+    bgFileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const bgDataUrl = event.target.result;
+          applyCustomBackground(bgDataUrl, bgOpacityInput.value / 100);
+          localStorage.setItem('customBg', bgDataUrl);
+          localStorage.setItem('customBgOpacity', bgOpacityInput.value);
+          autoSave();
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    function applyCustomBackground(dataUrl, opacity) {
+      customBg.style.backgroundImage = `url("${dataUrl}")`;
+      customBg.style.opacity = opacity;
+      customBg.style.display = 'block';
+      bgControls.classList.remove('hidden');
+      opacityVal.innerText = `${Math.round(opacity * 100)}%`;
+    }
+
+    bgOpacityInput.oninput = (e) => {
+      const val = e.target.value;
+      const opacity = val / 100;
+      customBg.style.opacity = opacity;
+      opacityVal.innerText = `${val}%`;
+      localStorage.setItem('customBgOpacity', val);
+    };
+
+    btnRemoveBg.onclick = () => {
+      customBg.style.backgroundImage = '';
+      customBg.style.display = 'none';
+      bgControls.classList.add('hidden');
+      localStorage.removeItem('customBg');
+      localStorage.removeItem('customBgOpacity');
+      bgFileInput.value = '';
+      autoSave();
+    };
+
+    // TEMA INSTANTÂNEO
     const btnTheme = document.getElementById('btn-theme');
     const iconDark = document.getElementById('theme-icon-dark');
     const iconLight = document.getElementById('theme-icon-light');
 
-    function applyTheme(theme, preserveCanvas = false) {
-      const oldTheme = currentTheme;
+    function applyTheme(theme) {
       currentTheme = theme;
       localStorage.setItem('theme', theme);
 
-      let tempCanvas = null;
-      if (preserveCanvas && canvas.width > 0 && canvas.height > 0) {
-        tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
-      }
-
       if (theme === 'light') {
-        document.body.className = "h-screen w-screen overflow-hidden transition-colors duration-300 rounded-xl border select-none flex flex-col bg-slate-200/95 text-slate-800 border-slate-300/80";
+        document.documentElement.classList.remove('dark');
         iconDark.classList.add('hidden');
         iconLight.classList.remove('hidden');
-        // Se a cor atual era a padrão do escuro, ajusta para a padrão do claro
         if (currentColor.toLowerCase() === darkPalette[0].toLowerCase() || !lightPalette.includes(currentColor)) {
           currentColor = lightPalette[0];
         }
       } else {
-        document.body.className = "h-screen w-screen overflow-hidden transition-colors duration-300 rounded-xl border select-none flex flex-col bg-slate-900/90 text-slate-100 border-slate-700/50";
+        document.documentElement.classList.add('dark');
         iconDark.classList.remove('hidden');
         iconLight.classList.add('hidden');
-        // Se a cor atual era a padrão do claro, ajusta para a padrão do escuro
         if (currentColor.toLowerCase() === lightPalette[0].toLowerCase() || !darkPalette.includes(currentColor)) {
           currentColor = darkPalette[0];
         }
       }
 
-      ctx.fillStyle = getCanvasBgColor();
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      if (tempCanvas) {
-        const tCtx = tempCanvas.getContext('2d');
-        const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-        const data = imgData.data;
-        const isOldDark = (oldTheme === 'dark');
-
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
-          if (a === 0) continue;
-
-          // Identifica pixels de fundo antigo para remover
-          const isBg = isOldDark ? (r === 15 && g === 23 && b === 42) : (r === 241 && g === 245 && b === 249);
-          if (isBg) {
-            data[i+3] = 0;
-          } else {
-            // Conversão suave mantendo o antialiasing (whiteness / darkness multiplier)
-            if (isOldDark) {
-              const whiteness = (r + g + b) / 765;
-              data[i] = 15; data[i+1] = 23; data[i+2] = 42;
-              data[i+3] = Math.round(a * Math.max(0.2, whiteness));
-            } else {
-              const darkness = 1 - ((r + g + b) / 765);
-              data[i] = 255; data[i+1] = 255; data[i+2] = 255;
-              data[i+3] = Math.round(a * Math.max(0.2, darkness));
-            }
-          }
-        }
-        tCtx.putImageData(imgData, 0, 0);
-        ctx.drawImage(tempCanvas, 0, 0);
-      }
-
+      pushColorToHistory(currentColor);
       renderColorPalette();
     }
 
     btnTheme.onclick = () => {
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      applyTheme(newTheme, true);
+      applyTheme(newTheme);
       autoSave();
     };
 
@@ -253,6 +390,13 @@
     }
 
     function loadSavedCanvas() {
+      const savedBg = localStorage.getItem('customBg');
+      const savedOpacity = localStorage.getItem('customBgOpacity') || '60';
+      if (savedBg) {
+        bgOpacityInput.value = savedOpacity;
+        applyCustomBackground(savedBg, savedOpacity / 100);
+      }
+
       const savedData = localStorage.getItem('savedCanvas');
       if (savedData) {
         const img = new Image();
@@ -260,13 +404,14 @@
           ctx.drawImage(img, 0, 0);
         };
         img.src = savedData;
-      } else {
-        ctx.fillStyle = getCanvasBgColor();
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
     }
 
     function resizeCanvas() {
+      const width = canvas.offsetWidth;
+      const height = canvas.offsetHeight;
+      if (width === 0 || height === 0) return;
+
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = canvas.width;
       tempCanvas.height = canvas.height;
@@ -274,12 +419,10 @@
         tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
       }
 
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      canvas.width = width;
+      canvas.height = height;
 
-      ctx.fillStyle = getCanvasBgColor();
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      if (canvas.width > 0 && canvas.height > 0) {
+      if (tempCanvas.width > 0 && tempCanvas.height > 0) {
         ctx.drawImage(tempCanvas, 0, 0);
       }
     }
@@ -309,14 +452,15 @@
       ctx.lineJoin = 'round';
       
       if (mode === 'eraser') {
-        ctx.strokeStyle = getCanvasBgColor();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
       } else {
+        ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = currentColor;
       }
       
       const pressureMultiplier = (currentPressure > 0 && currentPressure !== 0.5) ? currentPressure : 1;
       ctx.lineWidth = Math.max(1, currentSize * pressureMultiplier);
-      ctx.globalCompositeOperation = 'source-over';
 
       ctx.lineTo(drawX, drawY);
       ctx.stroke();
@@ -373,23 +517,22 @@
     penBtn.onclick = () => {
       mode = 'pen';
       penBtn.className = 'p-2 rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500';
-      eraserBtn.className = 'p-2 rounded-lg text-slate-400 hover:text-white transition hover:bg-slate-800/50';
+      eraserBtn.className = 'p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition hover:bg-slate-300 dark:hover:bg-slate-800';
     };
 
     eraserBtn.onclick = () => {
       mode = 'eraser';
       eraserBtn.className = 'p-2 rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500';
-      penBtn.className = 'p-2 rounded-lg text-slate-400 hover:text-white transition hover:bg-slate-800/50';
+      penBtn.className = 'p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition hover:bg-slate-300 dark:hover:bg-slate-800';
     };
 
     document.getElementById('brush-size').oninput = (e) => {
       currentSize = e.target.value;
     };
 
-    document.getElementById('btn-clear').onclick = () => {
+    const clearCanvas = () => {
       saveState();
-      ctx.fillStyle = getCanvasBgColor();
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       autoSave();
     };
 
@@ -399,20 +542,23 @@
         autoSave();
       }
     };
+
+    document.getElementById('sidebar-btn-clear').onclick = clearCanvas;
     document.getElementById('btn-undo').onclick = undo;
 
     window.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'z') undo();
       if (e.key.toLowerCase() === 'e') eraserBtn.click();
       if (e.key.toLowerCase() === 'p') penBtn.click();
-      if (e.key.toLowerCase() === 'c') document.getElementById('btn-clear').click();
+      if (e.key.toLowerCase() === 'c') clearCanvas();
     });
 
     window.onload = () => {
-      applyTheme(currentTheme, false);
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
+      applyTheme(currentTheme);
       loadSavedCanvas();
+      pushColorToHistory(currentColor);
     };
   </script>
 </body>
