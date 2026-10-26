@@ -162,7 +162,7 @@
     </div>
   </main>
 
-  <!-- LÓGICA DO CANVAS E HISTÓRICO DE CORES CORRIGIDO -->
+  <!-- LÓGICA DO CANVAS COM RESET DE HISTÓRICO NO CLEAR -->
   <script>
     lucide.createIcons();
 
@@ -282,16 +282,13 @@
       renderColorHistory();
     }
 
-    // Seletor de Cores Customizado (Corrigido para evitar histórico duplicado/lixo ao arrastar)
+    // Seletor de Cores Customizado
     const colorPickerInput = document.getElementById('color-picker-input');
-    
-    // Atualiza a cor suavemente enquanto arrasta (sem sujar o histórico)
     colorPickerInput.oninput = (e) => {
       currentColor = e.target.value;
       if (mode === 'eraser') document.getElementById('tool-pen').click();
     };
 
-    // Só consolida e adiciona ao histórico quando o usuário termina de escolher a cor
     colorPickerInput.onchange = (e) => {
       currentColor = e.target.value;
       pushColorToHistory(currentColor);
@@ -530,8 +527,9 @@
       currentSize = e.target.value;
     };
 
+    // Limpa a tela e zera o histórico de Undo (impede restaurar via Ctrl+Z após limpar)
     const clearCanvas = () => {
-      saveState();
+      history = [];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       autoSave();
     };
