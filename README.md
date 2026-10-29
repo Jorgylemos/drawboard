@@ -1,3 +1,5 @@
+## Atenção: Esse projeto foi inteiramente vibe codado; não fiz revisão manual. 
+
 # Drawboard Minimal (Electron)
 
 Um aplicativo de desktop minimalista, leve e *Always-On-Top* construído com **Electron** e **Tailwind CSS**. Desenhado especificamente para rascunhar equações, fazer anotações rápidas e desenhar por cima de qualquer janela do sistema sem precisar de Alt + Tab.
