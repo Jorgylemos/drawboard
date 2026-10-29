@@ -1,7 +1,7 @@
 {
   "name": "drawboard-minimal",
   "productName": "Drawboard Minimal",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Draw and solve equations over any window.",
   "main": "main.js",
   "author": "Jorge Lemos <jorgylemos@outlook.com>",
