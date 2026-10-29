@@ -17,11 +17,30 @@
     .drag-region { -webkit-app-region: drag; }
     .no-drag { -webkit-app-region: no-drag; }
     canvas { touch-action: none; }
+
+    @keyframes pulse-update {
+      0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.7); }
+      70%  { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+      100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+    }
+    .update-pulse { animation: pulse-update 1.5s infinite; border-radius: 6px; }
+    .toast-enter { opacity: 0; transform: translateX(12px); }
+    .toast-show  { opacity: 1; transform: translateX(0); }
   </style>
 </head>
 <body class="h-screen w-screen overflow-hidden transition-colors duration-300 rounded-xl border select-none flex flex-col
              bg-slate-200 text-slate-800 border-slate-300
              dark:bg-slate-900/90 dark:text-slate-100 dark:border-slate-700/50">
+
+  <!-- Barra fina de progresso do download -->
+  <div id="download-progress-container" class="hidden fixed top-0 left-0 right-0 h-1 z-[100]">
+    <div id="download-progress-bar"
+         class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-150"
+         style="width: 0%"></div>
+  </div>
+
+  <!-- Container de Toasts -->
+  <div id="toast-container" class="fixed top-12 right-3 z-[200] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- BARRA SUPERIOR DE TÍTULO / DRAG -->
   <header class="drag-region flex items-center justify-between px-3 py-2 bg-slate-300/60 dark:bg-slate-950/40 border-b border-slate-400/40 dark:border-slate-800/60 text-xs transition-colors">
@@ -46,6 +65,9 @@
 
       <div class="h-3 w-[1px] bg-slate-400/50 dark:bg-slate-800 mx-1"></div>
 
+      <button id="btn-update" title="Atualizar" class="p-1 hover:bg-slate-400/30 dark:hover:bg-slate-800/50 rounded text-indigo-500 dark:text-indigo-400 transition">
+        <i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i>
+      </button>
       <button id="btn-pin" title="Fixar no Topo" class="p-1 hover:bg-slate-400/30 dark:hover:bg-slate-800/50 rounded text-indigo-500 dark:text-indigo-400 transition">
         <i data-lucide="pin" class="w-3.5 h-3.5"></i>
       </button>
@@ -62,7 +84,7 @@
   <main class="relative flex-1 w-full h-full overflow-hidden">
     <!-- Camada de Fundo Personalizado -->
     <div id="custom-bg" class="absolute inset-0 bg-cover bg-center pointer-events-none transition-opacity duration-150" style="display: none; z-index: 0;"></div>
-    
+
     <!-- Canvas de Desenho -->
     <canvas id="paintCanvas" class="absolute inset-0 w-full h-full cursor-crosshair" style="z-index: 1;"></canvas>
 
@@ -80,7 +102,7 @@
           <i data-lucide="image" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></i> Escolher Imagem
         </button>
         <input type="file" id="bg-file-input" accept="image/*" class="hidden">
-        
+
         <!-- Controles extras de fundo -->
         <div id="bg-controls" class="flex flex-col gap-2 mt-1 hidden">
           <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
@@ -107,7 +129,7 @@
 
     <!-- BARRA FLUTUANTE DE FERRAMENTAS INFERIOR -->
     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-md border border-slate-300 dark:border-slate-800 px-3 py-2 rounded-2xl shadow-2xl flex items-center gap-3" style="z-index: 10;">
-      
+
       <!-- Pincel / Borracha -->
       <div class="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-300 dark:border-slate-800">
         <button id="tool-pen" class="p-2 rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500" title="Pincel (P)">
@@ -166,7 +188,7 @@
   <script>
     lucide.createIcons();
 
-    // Controles de Janela Electron
+    // ===== CONTROLES DE JANELA =====
     document.getElementById('btn-close').onclick = () => window.electronAPI.controlWindow('close');
     document.getElementById('btn-min').onclick = () => window.electronAPI.controlWindow('minimize');
     const pinBtn = document.getElementById('btn-pin');
@@ -177,7 +199,67 @@
       pinBtn.classList.toggle('text-slate-400', !isTop);
     });
 
-    // Sidebar
+    // ===== UPDATE =====
+    const btnUpdate = document.getElementById('btn-update');
+    const progWrap  = document.getElementById('download-progress-container');
+    const progBar   = document.getElementById('download-progress-bar');
+    const toastWrap = document.getElementById('toast-container');
+
+    function showToast(message, type = 'info') {
+      const palette = {
+        info:    'bg-indigo-600/95 border-indigo-400 text-white',
+        success: 'bg-emerald-600/95 border-emerald-400 text-white',
+        error:   'bg-rose-600/95 border-rose-400 text-white',
+        warning: 'bg-amber-500/95 border-amber-400 text-white',
+      };
+      const icons = { info: 'info', success: 'check-circle', error: 'alert-circle', warning: 'alert-triangle' };
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-start gap-2 px-3 py-2 rounded-xl border shadow-2xl text-xs font-medium backdrop-blur-md transition-all duration-300 toast-enter ${palette[type] || palette.info}`;
+      toast.innerHTML = `<i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0 mt-0.5"></i><span class="flex-1">${message}</span>`;
+      toast.onclick = () => toast.remove();
+      toastWrap.appendChild(toast);
+      lucide.createIcons();
+      requestAnimationFrame(() => toast.classList.add('toast-show'));
+      const ttl = type === 'error' ? 8000 : type === 'warning' ? 6000 : 4000;
+      setTimeout(() => { toast.classList.remove('toast-show'); setTimeout(() => toast.remove(), 300); }, ttl);
+    }
+
+    window.electronAPI.onStatusUpdate((message, type) => {
+      showToast(message, type);
+      const svg = btnUpdate.querySelector('svg');
+      if (svg) svg.classList.remove('animate-spin');
+      btnUpdate.disabled = false;
+      btnUpdate.classList.remove('update-pulse', 'text-indigo-500', 'dark:text-indigo-400', 'text-emerald-500', 'text-rose-500');
+      if (type === 'success')    btnUpdate.classList.add('text-emerald-500');
+      else if (type === 'error') btnUpdate.classList.add('text-rose-500');
+      else                       btnUpdate.classList.add('text-indigo-500', 'dark:text-indigo-400');
+      if (message.startsWith('Nova versão')) btnUpdate.classList.add('update-pulse');
+    });
+
+    window.electronAPI.onDownloadProgress((p) => {
+      progWrap.classList.remove('hidden');
+      progBar.style.width = `${Math.min(100, p.percent || 0)}%`;
+      if (p.percent >= 100) {
+        setTimeout(() => { progWrap.classList.add('hidden'); progBar.style.width = '0%'; }, 800);
+      }
+    });
+
+    btnUpdate.onclick = () => {
+      if (btnUpdate.disabled) return;
+      btnUpdate.disabled = true;
+      btnUpdate.classList.remove('update-pulse');
+      const svg = btnUpdate.querySelector('svg');
+      if (svg) svg.classList.add('animate-spin');
+      showToast('Verificando atualizações...', 'info');
+      window.electronAPI.checkForUpdates();
+      setTimeout(() => {
+        const s = btnUpdate.querySelector('svg');
+        if (s) s.classList.remove('animate-spin');
+        btnUpdate.disabled = false;
+      }, 15000);
+    };
+
+    // ===== SIDEBAR =====
     const sidebar = document.getElementById('sidebar');
     const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
     const btnCloseSidebar = document.getElementById('btn-close-sidebar');
@@ -192,7 +274,7 @@
     btnToggleSidebar.onclick = toggleSidebar;
     btnCloseSidebar.onclick = toggleSidebar;
 
-    // Canvas & Estado
+    // ===== CANVAS & ESTADO =====
     const canvas = document.getElementById('paintCanvas');
     const ctx = canvas.getContext('2d');
     const saveStatus = document.getElementById('save-status');
@@ -268,7 +350,7 @@
         btn.className = `color-btn w-6 h-6 rounded-full transition ${isActive ? 'ring-2 ring-indigo-500 scale-110' : 'hover:scale-105'}`;
         btn.style.backgroundColor = hex;
         btn.dataset.color = hex;
-        
+
         btn.onclick = () => {
           currentColor = hex;
           document.getElementById('color-picker-input').value = hex;
@@ -447,7 +529,7 @@
 
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      
+
       if (mode === 'eraser') {
         ctx.globalCompositeOperation = 'destination-out';
         ctx.strokeStyle = 'rgba(0,0,0,1)';
@@ -455,7 +537,7 @@
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = currentColor;
       }
-      
+
       const pressureMultiplier = (currentPressure > 0 && currentPressure !== 0.5) ? currentPressure : 1;
       ctx.lineWidth = Math.max(1, currentSize * pressureMultiplier);
 
@@ -477,7 +559,7 @@
       targetY = e.clientY - rect.top;
       drawX = targetX;
       drawY = targetY;
-      
+
       currentPressure = e.pressure > 0 ? e.pressure : 1;
 
       ctx.beginPath();
